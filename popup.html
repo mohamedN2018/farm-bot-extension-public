@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>Farm Bot</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo">🌾</span>
+      <div>
+        <h1>Farm Bot</h1>
+        <p>مزرعتنا السعيدة</p>
+      </div>
+    </div>
+    <label class="switch big" title="شغّال طول ما اللعبة مفتوحة">
+      <input type="checkbox" id="botOn" />
+      <span class="slider"></span>
+    </label>
+  </header>
+
+  <section class="card status-card">
+    <div class="agent-badge agent-only">🤖 الوكيل الكامل — بيشتغل لوحده</div>
+    <div class="status-line">
+      <span id="dot" class="dot"></span>
+      <span id="botStatus">البوت واقف</span>
+    </div>
+    <div id="botTotals" class="chips"></div>
+    <div id="botWarn" class="warn"></div>
+    <div class="meta-row">
+      <span id="coinsInfo"></span>
+      <span id="sceneInfo"></span>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button id="farmAll" class="btn primary manual-only">⚡ دورة كاملة دلوقتي</button>
+    <button id="farmStop" class="btn icon" title="إيقاف (Alt+Shift+S)">⏹</button>
+    <button id="farmStatus" class="btn icon" title="تحديث">🔄</button>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="brain">🧠<span>المخ</span></button>
+    <button class="tab" data-tab="harvest">🌾<span>حصاد</span><b id="bHarvest"></b></button>
+    <button class="tab" data-tab="plant">🌱<span>زراعة</span><b id="bPlant"></b></button>
+    <button class="tab" data-tab="animals">🐄<span>حيوانات</span><b id="bAnimals"></b></button>
+    <button class="tab" data-tab="machines">⚙️<span>مكن</span><b id="bMachines"></b></button>
+    <button class="tab" data-tab="settings">⚙<span>إعدادات</span></button>
+  </nav>
+
+  <!-- brain -->
+  <section class="panel active" id="p-brain">
+    <div class="goal">
+      <div class="goal-head"><span>🎯 الهدف</span><b id="goalPct">—</b></div>
+      <div class="bar"><div id="goalBar" class="bar-fill"></div></div>
+      <div class="goal-meta"><span id="goalCoinsTxt">—</span><span id="goalEta"></span></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="bCoins">—</b><span>فلوسك</span></div>
+      <div class="stat"><b id="bRate">—</b><span>🪙 في الساعة</span><small>آخر 3 ساعات</small></div>
+    </div>
+    <h3>أربح بذور دلوقتي (ربح ÷ الوقت لحد الحصاد الفعلي)</h3>
+    <table class="econ">
+      <thead><tr><th>البذرة</th><th>ربح</th><th>تجهز</th><th>🪙/س</th></tr></thead>
+      <tbody id="econTable"><tr><td colspan="4" class="empty">—</td></tr></tbody>
+    </table>
+    <h3>دخل المزرعة دي في الساعة (لو كل حاجة شغالة)</h3>
+    <div id="incomeInfo" class="muted small">—</div>
+    <h3>أسرع استثمار يرجّع فلوسه (من محل اللعبة — إنت اللي تشتري)</h3>
+    <table class="econ">
+      <thead><tr><th>الحاجة</th><th>سعر</th><th>🪙/س</th><th>يرجّع في</th></tr></thead>
+      <tbody id="investTable"><tr><td colspan="4" class="empty">—</td></tr></tbody>
+    </table>
+    <div id="aiPlan" class="ai-plan" hidden>
+      <div class="ai-head">🎓 كتيّب الوكيل (من تدريب الـ AI) <small id="aiWhen"></small></div>
+      <div id="aiSummary"></div>
+      <ul id="aiNotes"></ul>
+    </div>
+    <h3>🚜 مزارعك (بيروح للي فيها شغل)</h3>
+    <div id="scenesBoard" class="muted small">—</div>
+    <h3>🫙 المجفف (المحاصيل المائية)</h3>
+    <div id="dryInfo" class="muted small">—</div>
+    <h3>🧱 محتاج من المواد</h3>
+    <div id="needsInfo" class="muted small">—</div>
+    <h3>⚙️ مكن ممكن تعمل منتج أربح (غيّرها إنت من اللعبة)</h3>
+    <div id="machineTips" class="muted small">—</div>
+    <h3>📦 لسه تحت حد المخزون</h3>
+    <div id="stockInfo" class="muted small">—</div>
+    <h3>اللي عندك في كل مزارعك</h3>
+    <div id="inventoryInfo" class="muted small">—</div>
+    <h3>آخر قرارات</h3>
+    <ul id="decisions" class="items log"><li class="empty">لسه ما أخدش قرارات</li></ul>
+  </section>
+
+  <!-- harvest -->
+  <section class="panel" id="p-harvest">
+    <div class="stats">
+      <div class="stat"><b id="sReadyPlants">—</b><span>زرع جاهز</span><small id="sPlants"></small></div>
+      <div class="stat"><b id="sReadyTrees">—</b><span>شجر جاهز</span><small id="sTrees"></small></div>
+    </div>
+    <label class="row-toggle manual-only">الزرع <span class="switch"><input type="checkbox" id="harvestPlants" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle manual-only">الشجر <span class="switch"><input type="checkbox" id="harvestTrees" checked /><span class="slider"></span></span></label>
+    <button id="farmHarvest" class="btn wide manual-only">🌾 احصد دلوقتي</button>
+  </section>
+
+  <!-- plant -->
+  <section class="panel" id="p-plant">
+    <div class="seg wide-seg manual-only" id="seedMode">
+      <button data-v="agent">🤖 وكيل</button><button data-v="smart">🧠 ذكي</button><button data-v="manual">✋ بذرة واحدة</button>
+    </div>
+    <div id="smartBox" class="smart-box">
+      <p class="muted small" id="modeHelp"></p>
+      <ul id="planList" class="items"><li class="empty">—</li></ul>
+    </div>
+    <button id="seedCard" class="seed-card manual-only">
+      <span class="seed-emoji">🌱</span>
+      <span class="seed-text">
+        <b id="seedName">تلقائي</b>
+        <small id="seedMeta">أكتر بذرة موجودة في المزرعة</small>
+      </span>
+      <span class="seed-change">تغيير ›</span>
+    </button>
+    <div class="stats">
+      <div class="stat"><b id="sSoils">—</b><span>أرض فاضية</span></div>
+    </div>
+    <label class="row-toggle manual-only">أول ما أختار بذرة، ازرع الكل
+      <span class="switch"><input type="checkbox" id="autoPlantOnPick" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle manual-only">لما أختار بذرة من جوه اللعبة، كمّل الأرض كلها
+      <span class="switch"><input type="checkbox" id="gamePick" checked /><span class="slider"></span></span></label>
+    <button id="farmPlant" class="btn wide manual-only">🌱 ازرع الأرض الفاضية</button>
+  </section>
+
+  <!-- animals -->
+  <section class="panel" id="p-animals">
+    <ul id="animalList" class="items"><li class="empty">اضغط 🔄</li></ul>
+    <label class="row-toggle manual-only">جمع كل المنتجات <span class="switch"><input type="checkbox" id="animalCollect" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle manual-only">أكل لحد ما يتملي <span class="switch"><input type="checkbox" id="animalFeed" checked /><span class="slider"></span></span></label>
+    <button id="farmAnimals" class="btn wide manual-only">🐄 جمّع وأكّل — واحد واحد</button>
+  </section>
+
+  <!-- machines -->
+  <section class="panel" id="p-machines">
+    <ul id="machineList" class="items"><li class="empty">اضغط 🔄</li></ul>
+    <label class="row-toggle manual-only">جمع كل المنتجات <span class="switch"><input type="checkbox" id="machineCollect" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle manual-only">تعبئة كل الخانات للآخر <span class="switch"><input type="checkbox" id="machineRefill" checked /><span class="slider"></span></span></label>
+    <button id="farmMachines" class="btn wide manual-only">⚙️ جمّع وعبّي — واحدة واحدة</button>
+  </section>
+
+  <!-- settings -->
+  <section class="panel" id="p-settings">
+    <h3>طريقة الشغل</h3>
+    <div class="seg wide-seg" id="modeSel">
+      <button data-v="agent">🤖 وكيل كامل</button><button data-v="manual">🛠 تحكم يدوي</button>
+    </div>
+    <p class="muted small agent-only">الوكيل بيشتغل لوحده أول ما اللعبة تفتح: بيحصد ويجمّع ويأكّل ويعبّي المكن ويبيع ويزرع
+      أربح حاجة ويلف على مزارعك — من غير ما تدوس على حاجة. الأرقام تحت بس هي اللي ليك تغيّرها.</p>
+    <h3 class="manual-only">الدورة الكاملة تشمل</h3>
+    <label class="row-toggle manual-only">🌾 الحصاد <span class="switch"><input type="checkbox" id="doHarvest" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle manual-only">🐄 الحيوانات <span class="switch"><input type="checkbox" id="doAnimals" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle manual-only">⚙️ المكن <span class="switch"><input type="checkbox" id="doMachines" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle manual-only">🌱 الزراعة <span class="switch"><input type="checkbox" id="doPlant" checked /><span class="slider"></span></span></label>
+
+    <h3>💰 البيع من الحظيرة</h3>
+    <label class="row-toggle manual-only">يبيع لوحده لما يحتاج فلوس
+      <span class="switch"><input type="checkbox" id="sellOn" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle manual-only">يسيب من كل حاجة على الأقل
+      <span class="num-wrap"><input type="number" id="sellKeepMin" min="0" value="30" /></span></label>
+    <label class="row-toggle manual-only">لو حاجة زادت عن
+      <span class="num-wrap"><input type="number" id="sellMaxEach" min="50" value="500" /> يبيع الزيادة
+        <span class="switch"><input type="checkbox" id="sellSurplus" checked /><span class="slider"></span></span></span></label>
+    <label class="row-toggle">يحتفظ دايماً بفلوس
+      <span class="num-wrap"><input type="number" id="sellReserve" min="0" step="1000" value="0" /> 🪙</span></label>
+    <p class="muted small agent-only">الوكيل بيبيع <b>المنتجات النهائية بس</b> (اللي بتطلع من المكن والحيوانات ومفيش حاجة بتستهلكها) فوق حد المخزون.
+      الزرع والخامات أصول: مش بتتباع أبداً، إلا الزرع اللي محدش بيستهلكه في حالة اضطرارية لفلوس الزراعة.</p>
+    <p class="muted small manual-only">بيبيع بس اللي مزرعتك بتنتجه، ومش بيلمس اللي المكن والحيوانات محتاجاه ولا الحاجات اللي إنت قافلها في الحظيرة.</p>
+    <button id="sellNow" class="btn small">💰 بيع دلوقتي</button>
+    <ul id="sellPlan" class="items"></ul>
+
+    <label class="row-toggle">لو معاك أكتر من
+      <span class="num-wrap"><input type="number" id="sellCashFloor" min="0" step="500000" value="2000000" /> 🪙</span></label>
+    <label class="row-toggle">مايبيعش غير لما الحظيرة تساوي
+      <span class="num-wrap"><input type="number" id="sellBarnTrigger" min="0" step="1000000" value="10000000" /> 🪙</span></label>
+    <p class="muted small">تحت الحد ده بيبيع الزيادة عادي. فوقه بيخزّن، ولما قيمة اللي يتباع في الحظيرة توصل للرقم التاني يبيعه مرة واحدة. فلوس البذور بتتوفّر دايماً.</p>
+    <h3>🚜 المزارع</h3>
+    <label class="row-toggle manual-only">يلف على مزارعك (الرئيسية / الحديقة / المائية)
+      <span class="switch"><input type="checkbox" id="scenesOn" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle">أقل وقت يقعده في المزرعة قبل ما ينقل
+      <span class="num-wrap"><input type="number" id="sceneMinMin" min="1" value="3" /> دقيقة</span></label>
+    <label class="row-toggle">لو مشغول هنا وفيه شغل هناك، ينقل بعد
+      <span class="num-wrap"><input type="number" id="sceneMaxMin" min="5" value="20" /> دقيقة</span></label>
+
+    <h3>🛟 يكمّل لوحده</h3>
+    <label class="row-toggle">لو اللعبة اتقفلت أو علّقت يفتحها تاني
+      <span class="switch"><input type="checkbox" id="watchdog" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle">🎁 يعمل إعادة تحميل كل يوم عشان هدية تسجيل الدخول
+      <span class="switch"><input type="checkbox" id="dailyReloadOn" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle">الساعة
+      <span class="num-wrap"><input type="time" id="dailyReload" value="08:00" /></span></label>
+    <p class="muted small">خلّي اللعبة في شباك لوحدها ومتصغّرهوش — كروم بيبطّأ التابات المخفية.</p>
+
+    <h3>🎯 الهدف</h3>
+    <label class="row-toggle">أوصل لـ
+      <span class="num-wrap"><input type="number" id="goalCoins" min="1000" step="1000000" value="100000000" /> 🪙</span></label>
+
+    <div hidden>
+    <h3>🎓 مدرّب AI (بيذاكر اللعبة ويعلّم الوكيل)</h3>
+    <p class="muted small">الـ AI مش بيلعب طول اليوم. الوكيل بيلف على كل مزارعك ويسجّل كل حاجة، وبعدها الـ AI بيذاكرها مرة واحدة ويكتب كتيّب الوكيل بيمشي عليه لوحده. بيتدرّب تاني بس لما اللعبة تتغيّر (مستوى جديد، مزرعة، مكنة أو بذرة جديدة).</p>
+    <label class="row-toggle">يدرّب الوكيل لوحده
+      <span class="switch"><input type="checkbox" id="llmOn" /><span class="slider"></span></span></label>
+    <div class="seg wide-seg" id="llmProvider">
+      <button data-v="ollama">💻 محلي (Ollama)</button><button data-v="anthropic">☁️ Anthropic (مدفوع)</button>
+    </div>
+    <div class="prov-ollama">
+      <label class="row-toggle">عنوان Ollama
+        <span class="num-wrap"><input type="text" id="llmUrl" value="http://localhost:11434" style="width:170px;direction:ltr" /></span></label>
+      <label class="row-toggle">النموذج
+        <span class="num-wrap"><input type="text" id="llmModel" value="qwen2.5:7b" list="llmModels" style="width:150px;direction:ltr" /><datalist id="llmModels"></datalist></span></label>
+      <p class="muted small">التثبيت مرة واحدة: شغّل <code>windows\install-ollama.ps1</code> (بيثبّت Ollama وينزّل النموذج ~4.7GB)، أو من ollama.com. مفيش داتا بتخرج من جهازك ومفيش فلوس.
+        لو عاوزه على سيرفر بتاعك: شغّل Ollama هناك بـ <code>OLLAMA_ORIGINS=*</code> وحط عنوانه هنا.</p>
+      <div class="row small">
+        <button id="llmTest" class="btn small-btn">🔌 اختبر الاتصال</button>
+        <button id="llmPull" class="btn small-btn">⬇️ نزّل النموذج</button>
+      </div>
+    </div>
+    <div class="prov-anthropic">
+      <label class="row-toggle">مفتاح API
+        <span class="num-wrap"><input type="password" id="llmKey" placeholder="sk-ant-…" style="width:150px" /></span></label>
+      <label class="row-toggle">النموذج
+        <span class="num-wrap"><select id="llmModelA">
+          <option value="claude-opus-5-5">Opus 5.5</option>
+          <option value="claude-sonnet-5-5">Sonnet 5.5</option>
+          <option value="claude-haiku-5-5">Haiku 5.5</option>
+        </select></span></label>
+      <p class="muted small">اختياري ومدفوع. المفتاح بيتحفظ على جهازك بس.</p>
+    </div>
+    <div id="trainInfo" class="muted small"></div>
+    <button id="llmNow" class="btn small">🎓 درّب الوكيل دلوقتي</button>
+    <div id="llmInfo" class="muted small"></div>
+    <div id="llmError" class="warn"></div>
+    </div>
+
+
+    <h3>🚀 إمكانيات الوكيل</h3>
+    <label class="row-toggle">🫙 يفضّي المجفف لوحده (يبيع المائي، وينشّف اللي المكن محتاجاه)
+      <span class="switch"><input type="checkbox" id="fDryer" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle">🎁 يصرف هدايا العملات من صندوق الهدايا
+      <span class="switch"><input type="checkbox" id="fGiftCoins" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle">📬 البريد كل 5 دقايق (اقبل وأرسل الكل) + هدية الدخول اليومي + طلب سياج أبيض / فطيرة فراولة من الجيران يوم ويوم
+      <span class="switch"><input type="checkbox" id="fSocial" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle">💐 المحلات: يزرع خامات المحلات الأوتوماتيك (الحلويات، التجميل، المائي) ويصنع في محل تنسيق الزهور لما يكسب
+      <span class="switch"><input type="checkbox" id="fCrafts" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle">🎃 الأحداث (الأجزاء الببلاش بس): يأكّل الوزة الذهبية ويكسر البيض، وتسجيل دخول حدث الخريف
+      <span class="switch"><input type="checkbox" id="fEvents" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle">🔁 يغيّر منتج المكن للي المزرعة محتاجاه أو الأربح
+      <span class="switch"><input type="checkbox" id="fMachineSwitch" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle">📦 الطلبات التجارية (لو المكافأة ≥ قيمة الأصناف)
+      <span class="switch"><input type="checkbox" id="fOrders" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle">🚚 طلبات السوق
+      <span class="switch"><input type="checkbox" id="fShipOrders" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle">🧪 السماد والري على أغلى الزرع
+      <span class="switch"><input type="checkbox" id="fFertilize" checked /><span class="slider"></span></span></label>
+
+    <h3>📦 المخزون</h3>
+    <label class="row-toggle">يخلّي من كل حاجة على الأقل
+      <span class="num-wrap"><input type="number" id="stockTarget" min="0" step="100" value="5000" /></span></label>
+    <label class="row-toggle">ويبيع الزيادة فوق
+      <span class="num-wrap"><input type="number" id="stockSurplus" min="0" step="500" value="5000" /></span></label>
+    <p class="muted small">جزء من الأرض الفاضية بيتزرع بالحاجات اللي لسه تحت الحد. اللي المكن والحيوانات بيستهلكوه كتير حدّه بيبقى أكبر (كفاية 24 ساعة) عشان ما يتزرعش كل شوية.</p>
+
+    <h3>😴 الاستراحة</h3>
+    <label class="row-toggle">يرتاح زي البني آدم
+      <span class="switch"><input type="checkbox" id="restOn" checked /><span class="slider"></span></span></label>
+    <label class="row-toggle">يشتغل من
+      <span class="num-wrap"><input type="time" id="restFrom" value="08:00" /> لـ <input type="time" id="restTo" value="23:00" /></span></label>
+    <p class="muted small">جوه الساعات دي: يشتغل 40–90 دقيقة ويرتاح 8–20 دقيقة، بأوقات عشوائية.</p>
+
+    <h3>البوت</h3>
+    <label class="row-toggle">يفحص المزرعة كل
+      <span class="num-wrap"><input type="number" id="botInterval" min="2" value="5" /> ثانية</span></label>
+
+    <label class="row-toggle">السرعة
+      <span class="seg" id="botSpeed">
+        <button data-v="turbo">🚀 أقصى</button><button data-v="fast">⚡ سريع</button><button data-v="normal">🐢 عادي</button>
+      </span></label>
+
+    <h3>اختصارات</h3>
+    <p class="muted"><kbd>Alt+Shift+F</kbd> دورة كاملة &nbsp; <kbd>Alt+Shift+S</kbd> إيقاف</p>
+
+    <details>
+      <summary>أدوات متقدمة</summary>
+      <div class="adv">
+        <button id="apiScan" class="btn small">🧬 حفظ تقرير دوال اللعبة</button>
+        <button id="deepScan" class="btn small">🔬 حفظ تقرير المزرعة</button>
+        <button id="econScan" class="btn small">💰 حفظ تقرير البيع والمزارع</button>
+        <button id="netScan" class="btn small">🌐 حفظ تقرير الشبكة</button>
+        <button id="capsScan" class="btn small">🧩 تقرير الإمكانيات (الطلبات / المكن / السماد / الشراء)</button>
+        <button id="worldScan" class="btn primary small">🌍 تقرير الجيران والفعاليات والأرض (الجاي)</button>
+      </div>
+    </details>
+  </section>
+
+  <!-- seed picker sheet -->
+  <div id="seedSheet" class="sheet" hidden>
+    <div class="sheet-head">
+      <button id="seedBack" class="btn icon">›</button>
+      <input id="seedSearch" placeholder="🔎 دوّر على بذرة..." />
+    </div>
+    <label class="row-toggle small">اللي متاحة لمستواي بس
+      <span class="switch"><input type="checkbox" id="seedLevelOnly" checked /><span class="slider"></span></span></label>
+    <div id="seedList" class="seed-list"></div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

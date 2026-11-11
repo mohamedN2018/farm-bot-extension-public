@@ -1,0 +1,83 @@
+{
+  "manifest_version": 3,
+  "name": "Farm Bot - مزرعتنا السعيدة",
+  "version": "9.6.0",
+  "description": "وكيل مزرعتنا السعيدة: يحصد ويجمّع ويأكّل ويعبّي المكن ويزرع خامات المكن والحيوانات اللي بتكسب ويبيع ويلف على مزارعك — لوحده طول ما اللعبة مفتوحة.",
+  "permissions": [
+    "storage",
+    "scripting",
+    "tabs",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://www.facebook.com/*",
+    "https://web.facebook.com/*",
+    "https://*.apps.fbsbx.com/*",
+    "https://*.centurygames.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.apps.fbsbx.com/*",
+        "https://*.centurygames.com/*"
+      ],
+      "js": [
+        "probe-main.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://*.apps.fbsbx.com/*"
+      ],
+      "js": [
+        "agent-main.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_idle",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://*.apps.fbsbx.com/*"
+      ],
+      "js": [
+        "agent-bridge.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Farm Bot",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "commands": {
+    "farm-all": {
+      "suggested_key": {
+        "default": "Alt+Shift+F"
+      },
+      "description": "دورة كاملة دلوقتي"
+    },
+    "stop-all": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "إيقاف الوكيل"
+    }
+  }
+}
